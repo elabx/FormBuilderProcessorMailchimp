@@ -13,6 +13,7 @@
     }
   ],
   "require": {
+    "wireframe-framework/processwire-composer-installer": "^1.1",
     "mailchimp/marketing": "^3.0"
   }
 }
