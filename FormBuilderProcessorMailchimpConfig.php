@@ -1,5 +1,5 @@
 <?php namespace ProcessWire;
-class FormBuilderProcessorMailchimpActionConfig extends ModuleConfig {
+class FormBuilderProcessorMailchimpConfig extends ModuleConfig {
   public function getDefaults() {
     return array(
       'api_key' => '',
