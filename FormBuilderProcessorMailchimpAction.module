@@ -1,0 +1,168 @@
+<?php namespace ProcessWire;
+
+use MailchimpMarketing\ApiClient as Client;
+
+class FormBuilderProcessorMailchimpAction extends FormBuilderProcessorAction implements Module
+{
+  protected Client $client;
+  protected string $mailchimp_merge_fields;
+  protected bool $mailchimp_log;
+  protected int $mailchimp_status = 0;
+
+  public function init()
+  {
+    $this->client = new Client();
+    $this->client->setConfig([
+      'apiKey' => $this->api_key,
+      'server' => $this->server,
+    ]);
+  }
+
+  /**
+   * @param $text string
+   * @param $form InputfieldForm
+   * @return array
+   */
+  public function mergeFieldValues($text, $form)
+  {
+    $value = explode("\n", $text);
+    $newValue = [];
+    foreach ($value as $row) {
+      $pos = strpos($row, '=');
+      if ($pos) {
+        $key = trim(substr($row, 0, $pos));
+        $field = trim(substr($row, $pos + 1));
+        $value = $form->get($field)->value;
+        $newValue[$key] = $value;
+      }
+    }
+    return $newValue;
+  }
+
+  public function textToArray($text)
+  {
+    $value = explode("\n", $text);
+    $newValue = [];
+    foreach ($value as $row) {
+      $pos = strpos($row, '=');
+      if ($pos) {
+        $key = trim(substr($row, 0, $pos));
+        $value = trim(substr($row, $pos + 1));
+        $newValue[$key] = $value;
+      }
+    }
+    return $newValue;
+  }
+
+  public function processReady()
+  {
+    $this->addHookAfter('FormBuilderProcessor::processInputDone', function ($event) {
+      /** @var InputfieldForm $form */
+      $form = $event->arguments(0);
+      $email_field = $this->get('mailchimp_email_field');
+      if($email_field){
+        $email = $form->get($email_field)->value;
+      }else{
+        $email = $form->get('email|email_address')->value;
+      }
+      if(!$email){
+        wire('log')->save('fb-mailchimp-error', "No email field found for Mailchimp action");
+        return;
+      }
+      $merge_fields = $this->get('mailchimp_merge_fields');
+      $status = $this->get('mailchimp_status');
+
+      $condition_passed = [];
+      $conditions = $this->get('mailchimp_action_condition');
+      if ($conditions) {
+        $values = $this->textToArray($conditions);
+        foreach ($values as $field => $val) {
+
+          $field_with_condition = $form->getChildByName($field);
+
+          try {
+            if ($field_with_condition->value() == $val) {
+              $condition_passed[] = true;
+            } else {
+              $condition_passed[] = false;
+            }
+          } catch (Exception $e) {
+            $form->error($e);
+          }
+        }
+        if (in_array(false, $condition_passed, true) === true) {
+          return;
+        }
+      }
+      if ($merge_fields) {
+        $fields_to_add = $this->mergeFieldValues($merge_fields, $form);
+      }
+      $data = [
+        "email_address" => $email,
+        "status" => $status,
+      ];
+
+      if ($fields_to_add) {
+        $data['merge_fields'] = $fields_to_add;
+      }
+
+      try {
+        $response = $this->client->lists->setListMember($this->get('mailchimp_list_id'), $email ,$data);
+        if ($this->get('mailchimp_log')) {
+          wire('log')->save('fb-mailchimp', json_encode($response, true));
+        }
+      } catch (\Exception $e) {
+        //$form->error($e->getMessage());
+        wire('log')->save('fb-mailchimp-error', $e->getMessage());
+      }
+    });
+  }
+
+  public function getConfigInputfields(InputfieldWrapper $inputfields)
+  {
+    // make field(s) needed to configure this action
+
+    $f = $this->modules->get('InputfieldText');
+    $f->attr('name', 'mailchimp_list_id');
+    $f->label = 'List ID';
+    $f->val($this->mailchimp_list_id);
+    $inputfields->add($f);
+
+    $f = $this->modules->get('InputfieldText');
+    $f->attr('name', 'mailchimp_email_field');
+    $f->label = 'Email field name';
+    $f->val($this->mailchimp_mail_field);
+    $inputfields->add($f);
+
+    /** @var InputfieldRadios $f */
+    $f = $this->modules->get('InputfieldRadios');
+    $f->attr('name', 'mailchimp_status');
+    $f->label = 'Default subscription status';
+    $f->defaultValue = 'subscribed';
+    $f->addOptions([
+      'subscribed' => 'Subscribed',
+      'pending' => 'Pending',
+      'cleaned' => 'Cleaned',
+      'transactional' => 'Transactional'
+    ]);
+    $f->val($this->get('mailchimp_status') ?: 'subscribed');
+    $inputfields->add($f);
+
+    $f = $this->modules->get('InputfieldTextarea');
+    $f->attr('name', 'mailchimp_merge_fields');
+    $f->label = 'Additional merge fields';
+    $f->notes = 'Add merge fields per line like this: *|FNAME|*=form_field_name ';
+    $f->val($this->get('mailchimp_merge_fields'));
+    $inputfields->add($f);
+
+    $f = new InputfieldTextarea();
+    $f->label = "Conditions";
+    $f->description = "Set matching conditions for the forwarding to mailchimp to happen.";
+    $f->notes = "If multiple conditions are set, all have to evaluate to true for the action to occur. Only the equal sign operator is supported. e.g. \"opt_in=1\"";
+    $f->name = "mailchimp_action_condition";
+    $f->setAttribute('rows', 5);
+    $f->value = $this->get('mailchimp_action_condition') ?: "";
+    $inputfields->add($f);
+
+  }
+}

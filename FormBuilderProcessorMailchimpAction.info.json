@@ -1,0 +1,7 @@
+{
+  "title" : "Forward form data to Mailchimp",
+  "version" : 1,
+  "summary" : "Forward form data to Mailchimp",
+  "icon" : "smile-o",
+  "requires": "FormBuilder>=0.4.5"
+}

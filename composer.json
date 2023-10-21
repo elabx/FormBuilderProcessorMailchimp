@@ -1,0 +1,18 @@
+{
+  "name": "elabx/formbuilder-action-mailchimp",
+  "description": "FormBuilder action to forward data to Mailchimp",
+  "type": "pw-module",
+  "keywords": ["processwire"],
+  "homepage": "https://github.com/elabx/FormBuilderProcessorMailchimpAction",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Eduardo San Miguel Garcia",
+      "email": "abx88as@gmail.com",
+      "homepage": "https://github.com/elabx"
+    }
+  ],
+  "require": {
+    "mailchimp/marketing": "^3.0"
+  }
+}
