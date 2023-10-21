@@ -2,7 +2,7 @@
 
 use MailchimpMarketing\ApiClient as Client;
 
-class FormBuilderProcessorMailchimpAction extends FormBuilderProcessorAction implements Module
+class FormBuilderProcessorMailchimp extends FormBuilderProcessorAction implements Module
 {
   protected Client $client;
   protected string $mailchimp_merge_fields;
