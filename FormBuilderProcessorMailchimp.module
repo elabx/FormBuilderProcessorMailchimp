@@ -4,16 +4,19 @@ use MailchimpMarketing\ApiClient as Client;
 
 class FormBuilderProcessorMailchimp extends FormBuilderProcessorAction implements Module
 {
-  protected Client $client;
-  protected string $mailchimp_merge_fields;
-  protected bool $mailchimp_log;
-  protected int $mailchimp_status = 0;
+  protected  $client;
 
   public function init()
   {
     $this->client = new Client();
+    $config_key = wire('config')->mailchimp_api_key;
+    if($config_key){
+        $api_key = $config_key;
+    }else{
+        $api_key = $this->api_key;
+    }
     $this->client->setConfig([
-      'apiKey' => $this->api_key,
+      'apiKey' => $api_key,
       'server' => $this->server,
     ]);
   }
@@ -131,7 +134,7 @@ class FormBuilderProcessorMailchimp extends FormBuilderProcessorAction implement
     $f = $this->modules->get('InputfieldText');
     $f->attr('name', 'mailchimp_email_field');
     $f->label = 'Email field name';
-    $f->val($this->mailchimp_mail_field);
+    $f->val($this->mailchimp_email_field);
     $inputfields->add($f);
 
     /** @var InputfieldRadios $f */
@@ -151,7 +154,7 @@ class FormBuilderProcessorMailchimp extends FormBuilderProcessorAction implement
     $f = $this->modules->get('InputfieldTextarea');
     $f->attr('name', 'mailchimp_merge_fields');
     $f->label = 'Additional merge fields';
-    $f->notes = 'Add merge fields per line like this: *|FNAME|*=form_field_name ';
+    $f->notes = 'Add merge fields per line using [merge field labels](https://mailchimp.com/help/getting-started-with-merge-tags/): FNAME=firs_name ';
     $f->val($this->get('mailchimp_merge_fields'));
     $inputfields->add($f);
 
