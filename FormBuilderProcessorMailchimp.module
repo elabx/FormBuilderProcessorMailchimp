@@ -1,6 +1,7 @@
 <?php namespace ProcessWire;
 
 use MailchimpMarketing\ApiClient as Client;
+use GuzzleHttp\Exception\RequestException as RequestException;
 
 class FormBuilderProcessorMailchimp extends FormBuilderProcessorAction implements Module
 {
@@ -114,9 +115,8 @@ class FormBuilderProcessorMailchimp extends FormBuilderProcessorAction implement
         if ($this->get('mailchimp_log')) {
           wire('log')->save('fb-mailchimp', json_encode($response, true));
         }
-      } catch (\Exception $e) {
-        //$form->error($e->getMessage());
-        wire('log')->save('fb-mailchimp-error', $e->getMessage());
+      } catch (RequestException $e) {
+          wire('log')->save('fb-mailchimp-error', (string)$e->getResponse()->getBody());
       }
     });
   }
